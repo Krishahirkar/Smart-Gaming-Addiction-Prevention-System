@@ -443,35 +443,26 @@ def try_read_frame(cap):
 
 
 def open_camera(camera_index):
-    errors = []
-    sizes = [(CAMERA_WIDTH, CAMERA_HEIGHT), (640, 480), (0, 0)]
+    # Try the most stable Windows backend directly
+    cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+    
+    if not cap.isOpened():
+        # Fallback to default if DirectShow fails
+        cap = cv2.VideoCapture(camera_index)
+        
+    if not cap.isOpened():
+        raise RuntimeError(f"Could not open webcam at index {camera_index}. Check if another app is using it.")
 
-    for backend_name, backend in camera_backends():
-        for width, height in sizes:
-            cap = cv2.VideoCapture(camera_index, backend)
-            if not cap.isOpened():
-                cap.release()
-                errors.append(f"{backend_name}: could not open")
-                continue
+    # Set resolution
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
-            if width and height:
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-
-            first_frame = try_read_frame(cap)
-            if first_frame is not None:
-                return cap, first_frame, backend_name
-
-            cap.release()
-            size_name = f"{width}x{height}" if width and height else "default size"
-            errors.append(f"{backend_name} {size_name}: opened but no frames")
-
-    details = "; ".join(errors[-6:])
-    raise RuntimeError(
-        f"Could not read from webcam index {camera_index}. "
-        "Close other apps using the camera or try --camera-index 1. "
-        f"Attempts: {details}"
-    )
+    # Warmup
+    ret, frame = cap.read()
+    if not ret or frame is None:
+        raise RuntimeError("Webcam opened but failed to provide a frame.")
+        
+    return cap, frame, "Fixed Backend"
 
 
 def run(camera_index=CAMERA_INDEX):

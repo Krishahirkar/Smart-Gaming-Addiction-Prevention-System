@@ -1,7 +1,12 @@
 import argparse
 from pathlib import Path
 
-from Perception.rage_detection import DEFAULT_DATA_PATH, FEATURE_COLUMNS, MODEL_PATH
+from Perception.rage_detection import (
+    DEFAULT_DATA_PATH,
+    FEATURE_COLUMNS,
+    MODEL_FEATURE_COLUMNS,
+    MODEL_PATH,
+)
 
 
 def train(data_path, model_path):
@@ -31,7 +36,7 @@ def train(data_path, model_path):
     if data["label"].nunique() < 2:
         raise SystemExit("Training data needs at least two labels, for example calm and rage.")
 
-    x = data[FEATURE_COLUMNS]
+    x = data[MODEL_FEATURE_COLUMNS]
     y = data["label"].astype(int)
 
     if len(data) >= 10:
@@ -46,9 +51,10 @@ def train(data_path, model_path):
         x_train, x_test, y_train, y_test = x, x, y, y
 
     model = RandomForestClassifier(
-        n_estimators=120,
+        n_estimators=160,
         random_state=42,
         class_weight="balanced",
+        min_samples_leaf=2,
     )
     model.fit(x_train, y_train)
 
